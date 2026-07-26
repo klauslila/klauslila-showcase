@@ -94,10 +94,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  BT["boot · inline prefetch already in flight"] --> RC{"payload before<br/>the deadline?"}
-  RC -->|"yes"| LV["live · fixed-cadence poll"]
-  RC -->|"no"| RF["refetch"] --> LV
-  BT -->|"upstream silent or first poll fails"| SN["417-aircraft real capture"]
+  BT["boot · prefetch starts before the framework"] --> R{"which payload<br/>answers first?"}
+  R -->|"the prefetch"| LV["live · fixed-cadence poll"]
+  R -->|"a backup fetch, opened at 1.2s"| LV
+  BT -->|"at 700ms, if nothing live yet:<br/>paint the real capture"| SN["417-aircraft snapshot"]
   SN -->|"crossfade"| LV
   LV -->|"tab backgrounded"| PS["paused · resumes on visibility"]
   LV -->|"fail streak"| BO["backing off · resumes on recovery"]
@@ -105,8 +105,9 @@ flowchart TD
 
 | Technique | Effect |
 |---|---|
-| Prefetch before the framework mounts, raced against a deadline | First payload in flight during parse |
-| Frozen real capture as initial state | Never empty on first paint, never synthetic |
+| Prefetch starts before the framework, and is never abandoned: a backup fetch opens at 1.2s and the first answer wins | The connections least able to afford it were otherwise paying for the round trip twice |
+| The real capture paints at 700ms, ahead of the loading overlay lifting at 800ms | The hero is never an empty sky. The overlay lifts on a clock, so the fleet has to be on that clock's timeline rather than the network's |
+| Live data arriving first skips the capture entirely; arriving later crossfades over it | No flicker either way |
 | Basemap baked once to an offscreen canvas | Per-frame work is aircraft only, not reprojection |
 | Visibility-gated polling, fail-streak backoff, expiring trails | No background polling, no punished upstream, bounded memory |
 
@@ -164,7 +165,7 @@ neither on the page nor here.
 | Page | One HTML file · precompiled React 18 · no build step | 211 KB, 35 components, 153 element calls |
 | Map | d3-geo · d3-array · topojson-client · world-atlas · Canvas 2D | Libraries vendored and pinned |
 | Edge | Cloudflare Pages · Pages Functions · cache API · header rules | One Function, 94 lines |
-| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 38 commits since 2026-04-01 |
+| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 39 commits since 2026-04-01 |
 <!-- stats:end:selfstats -->
 
 <p align="center">
