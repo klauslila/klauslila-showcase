@@ -158,12 +158,14 @@ neither on the page nor here.
 
 # 🧰 Stack
 
+<!-- stats:start:selfstats · generated from the working tree and git, do not hand-edit -->
 | Layer | Built with | Size |
 |---|---|---|
-| Page | One HTML file · precompiled React 18 · no build step | 215 KB, 35 components, 153 element calls |
+| Page | One HTML file · precompiled React 18 · no build step | 211 KB, 35 components, 153 element calls |
 | Map | d3-geo · d3-array · topojson-client · world-atlas · Canvas 2D | Libraries vendored and pinned |
 | Edge | Cloudflare Pages · Pages Functions · cache API · header rules | One Function, 94 lines |
-| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 36 commits since 2026-04-01 |
+| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 38 commits since 2026-04-01 |
+<!-- stats:end:selfstats -->
 
 <p align="center">
   <a href="https://klauslila.com">Klaus Lila</a> ·
