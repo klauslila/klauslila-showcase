@@ -18,9 +18,9 @@
 
 ## 📊 Overview
 
-Two constraints set before any of it was written. Every decision below follows from them.
+Two non-functional requirements set before any of it was written. Every decision below follows from them.
 
-| # | Constraint | Ruled out |
+| # | Requirement | Ruled out |
 |---|---|---|
 | 1 | No build step. The deployed artifact is the file I edit. | Bundlers, JSX transforms, a `dist/` I cannot read |
 | 2 | Real data only. If the map shows aircraft, they exist. | Synthesised traffic, random walkers, decorative animation |
