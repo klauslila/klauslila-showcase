@@ -40,10 +40,11 @@ flowchart TB
 
 | Concern | Implementation |
 |---|---|
-| Origin | Cloudflare Pages serves the repo root directly. There is no origin server, and no build output to reconcile against source |
+| Origin | Cloudflare Pages serves one directory of static files. There is no origin server, and no build step whose output could drift from source |
 | Network surface | The same-origin Function is the page's only network dependency. The browser contacts no third-party host |
 | Dependencies | Libraries and atlases vendored and pinned, so the page also opens from `file://` with network features off |
-| Output directory | Pinned in `wrangler.toml`, because the dashboard's stale setting fails every git build |
+| Output directory | Only `public/` is deployed, pinned in `wrangler.toml`. Pages serves everything in the output directory and has no exclusion mechanism, so pointing it at the repo root also published the project's instruction and config files as fetchable URLs. Documentation and configuration now live outside the deployed directory |
+| Unknown paths | A real `404.html`. Without one, Pages falls back to `index.html` with a 200, so every wrong URL quietly renders the site instead of failing |
 | Local development | `wrangler pages dev` runs the Function locally, so the proxy path is testable before deploy |
 | Caching | `vendor/` immutable, the IATA lookup on a one-day cache, Function responses on a TTL matched to the poll interval |
 | Rendering | React as a plain script, markup precompiled, nothing transpiled at request or at deploy time |
