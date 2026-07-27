@@ -135,14 +135,14 @@ One scroll value reaches every scene, so an unguarded page re-renders fully per 
 
 | Target | Trigger | Mechanism |
 |---|---|---|
-| Site | Push to `main` | Pages builds from the repo root. With no build step the deploy is a copy, so what I tested is byte-identical to what ships |
+| Site | Push to `main` | Pages builds from `public/`. With no build step the deploy is a copy, so what I tested is byte-identical to what ships |
 | Edge Function | Push to `main` | Deployed on the same commit, so the page and its proxy cannot version-skew |
 | Vendored library upgrade | Manual | **Rename the file.** `vendor/` is cached immutably, so replacing bytes at a stable path serves the old library indefinitely |
 
 Three things bite here if you forget them. The dashboard's output-dir setting fails every git build, so it is
-pinned in config. The runtime IATA lookup ships as a separate asset, and without it the red-plane logic
-silently no-ops. And the proxy cannot be exercised by opening the file, so it is tested through the local
-Pages runtime instead.
+pinned in config. A lookup table ships as a separate runtime asset, and if it goes missing the styling it
+feeds silently no-ops instead of failing. And the proxy cannot be exercised by opening the file, so it is
+tested through the local Pages runtime instead.
 
 ## 🔒 Security headers
 
