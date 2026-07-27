@@ -170,5 +170,6 @@ neither on the page nor here.
 
 <p align="center">
   <a href="https://klauslila.com">Klaus Lila</a> ·
-  <a href="https://github.com/klauslila/skaisearch-showcase">skaisearch write-up</a>
+  <a href="https://github.com/klauslila/skaisearch-showcase">skaisearch write-up</a><br />
+  <sub>© 2024-2026 Klaus Lila. All rights reserved. Not licensed for reuse.</sub>
 </p>
