@@ -31,7 +31,7 @@ Two non-functional requirements set before any of it was written. Every decision
 flowchart TB
   V["visitor"] --> CP["Cloudflare Pages<br/>static origin: one HTML file · vendor/ · atlases"]
   CP --> PB["page boots<br/>no bundler, no hydration step"]
-  PB -->|"same-origin poll"| EF["Pages Function<br/>94 lines"]
+  PB -->|"same-origin poll"| EF["Pages Function<br/>one pinned proxy"]
   EF <--> CA[("colo cache")]
   EF <-->|"one pinned region"| UP["upstream ADS-B"]
   PB --> CV["Canvas 2D<br/>basemap baked offscreen once<br/>aircraft redrawn per frame"]
@@ -54,7 +54,10 @@ flowchart TB
 # 📡 1 · Edge
 
 The upstream soft-throttles scripted access with a `200 OK` carrying a near-empty body. Status codes are
-therefore unusable as a health signal, so the Function keys on response size and degrades in stages.
+therefore unusable as a health signal, so the Function keys on response size and degrades in stages. The
+stored copy that covers a throttled upstream earns a second job: it also keeps the round trip out of the
+request path, because a cache miss answers from it and refreshes afterwards rather than making the visitor
+wait.
 
 ```mermaid
 sequenceDiagram
@@ -69,13 +72,19 @@ sequenceDiagram
   alt fresh copy
     C-->>F: hit
     F-->>B: serve, zero upstream calls
-  else miss
+  else last-known-good inside the stand-in window
+    C-->>F: copy young enough to pass for current
+    F-->>B: serve now, at a cache hit's latency
+    F->>U: refresh behind the response
+    U-->>F: 200
+    F->>C: rewrite both copies
+  else nothing recent enough
     F->>U: fetch
     U-->>F: 200, body under the real-payload floor
     F->>U: retry once
     U-->>F: still throttled
     F->>C: match last-known-good
-    C-->>F: recent payload
+    C-->>F: older payload
     F-->>B: serve it, flagged stale in a header
   end
 ```
@@ -86,6 +95,9 @@ sequenceDiagram
 | Cache keyed on my own URL | The upstream response carries cookies, which disables implicit fetch caching |
 | TTL matched to the client poll interval | Concurrent visitors collapse onto one upstream request |
 | One immediate retry | Empties are frequently per-request flukes on the upstream balancer |
+| A miss inside the stand-in window answers from cache and refreshes behind the response | The upstream round trip measured roughly twelve times a cache hit. Paying it inside the request was what pushed first data past the loading overlay, so the hero fell back to the stored capture and then had to swap. Answering from the last copy removes the swap rather than hiding it |
+| Stand-in window kept far shorter than the retention window | Three minutes is right for an outage and far too loose for the normal path. The short window keeps drift inside what the client's own poll interval already tolerates |
+| Age stamped on the stored copy | The cache API exposes no reliable age for a response the Function wrote itself, and the window is only enforceable if the age is readable |
 | Last-known-good fallback, header-flagged | Aircraft drift ~2 px/min at this zoom, so a slightly old payload is visually identical and the degradation stays observable to me |
 | Bounds pin plus caller allow-list, absent-Referer permitted | Prevents reuse as a general relay without breaking privacy-hardened browsers |
 
