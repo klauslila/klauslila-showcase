@@ -81,7 +81,7 @@ sequenceDiagram
   else nothing recent enough
     F->>U: fetch
     U-->>F: 200, body under the real-payload floor
-    F->>U: retry once
+    F->>U: re-roll after a short gap
     U-->>F: still throttled
     F->>C: match last-known-good
     C-->>F: older payload
@@ -94,7 +94,8 @@ sequenceDiagram
 | Response size as the health signal | A throttled reply is `200`, so trusting the status forwards a blank map with every indicator green |
 | Cache keyed on my own URL | The upstream response carries cookies, which disables implicit fetch caching |
 | TTL matched to the client poll interval | Concurrent visitors collapse onto one upstream request |
-| One immediate retry | Empties are frequently per-request flukes on the upstream balancer |
+| Spaced re-rolls rather than one immediate retry | The upstream rations by request count and not by a time window. Roughly a third of calls come back empty at the poll cadence, and back-to-back tries fare worst, so an empty is odds to re-roll rather than a window to wait out. The refresh running behind a response gets one roll more than the blocking path, where a visitor is waiting on it |
+| Degraded responses go out uncacheable | The client answers an empty with fast retries. Any `max-age` on that response turns each retry into a replay of the same failure out of the browser cache, so the recovery path reads as correct while issuing no requests at all |
 | A miss inside the stand-in window answers from cache and refreshes behind the response | The upstream round trip measured roughly twelve times a cache hit. Paying it inside the request was what pushed first data past the loading overlay, so the hero fell back to the stored capture and then had to swap. Answering from the last copy removes the swap rather than hiding it |
 | Stand-in window kept far shorter than the retention window | Three minutes is right for an outage and far too loose for the normal path. The short window keeps drift inside what the client's own poll interval already tolerates |
 | Age stamped on the stored copy | The cache API exposes no reliable age for a response the Function wrote itself, and the window is only enforceable if the age is readable |
@@ -118,7 +119,7 @@ flowchart TD
 
 | Technique | Effect |
 |---|---|
-| Prefetch starts before the framework, and is never abandoned: a backup fetch opens at 1.2s and the first answer wins | The connections least able to afford it were otherwise paying for the round trip twice |
+| Prefetch starts before the framework, and is never abandoned: a backup fetch opens at 1.2s and the first answer wins, with the fuse cancelled the moment the prefetch answers | The connections least able to afford it were otherwise paying for the round trip twice. Left armed on success, the backup opened a request nobody was waiting for, into an upstream that rations by request count |
 | The real capture paints at 700ms, ahead of the loading overlay lifting at 800ms | The hero is never an empty sky. The overlay lifts on a clock, so the fleet has to be on that clock's timeline rather than the network's |
 | Live data arriving first skips the capture entirely; arriving later crossfades over it | No flicker either way |
 | Basemap baked once to an offscreen canvas | Per-frame work is aircraft only, not reprojection |
