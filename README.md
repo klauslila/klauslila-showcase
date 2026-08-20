@@ -179,7 +179,7 @@ neither on the page nor here.
 | Page | One HTML file · precompiled React 18 · no build step | 217 KB, 36 components, 157 element calls |
 | Map | d3-geo · d3-array · topojson-client · world-atlas · Canvas 2D | Libraries vendored and pinned |
 | Edge | Cloudflare Pages · Pages Functions · cache API · header rules | One Function, 167 lines |
-| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 95 commits since 2026-04-01 |
+| Data | Live ADS-B through the pinned proxy · runtime IATA lookup | 96 commits since 2026-04-01 |
 <!-- stats:end:selfstats -->
 
 <p align="center">
