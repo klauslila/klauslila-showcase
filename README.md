@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Personal site with a live ADS-B map in the hero. One 215 KB HTML file, no build step, and an edge proxy that treats a <code>200</code> as untrusted.
+  Personal site with a live ADS-B map in the hero. One HTML file, no build step, and an edge proxy that treats a <code>200</code> as untrusted.
 </p>
 
 <p align="center">
@@ -129,7 +129,36 @@ flowchart TD
 
 # ⚡ 3 · Page
 
-One scroll value reaches every scene, so an unguarded page re-renders fully per frame.
+One scroll value reaches every scene, so an unguarded page re-renders fully per frame. Two pipelines share
+that frame. React owns the page, Canvas 2D owns the map, and each is held back by a different mechanism so
+that neither does work nothing asked for.
+
+```mermaid
+flowchart LR
+  SC["scroll event<br/>passive listener"] --> L{"frame already<br/>scheduled?"}
+  L -->|"yes"| DR["dropped"]
+  L -->|"no"| ST["one state update<br/>this frame"]
+  ST --> SM["memoised scenes<br/>never re-render"]
+  ST --> AC["the scene in view<br/>re-renders"]
+  EV["payload · pointer · animation"] --> DF["mark dirty"]
+  RA["animation frame"] --> CK{"dirty?"}
+  CK -->|"no"| ID["one boolean read,<br/>no paint"]
+  CK -->|"yes"| RD["blit baked basemap,<br/>draw trails and aircraft"]
+  DF --> CK
+```
+
+The scroll listener is passive and sets no state of its own. It arms a latch and schedules a single
+animation frame, so a burst of scroll events collapses into one update and the page cannot be driven faster
+than it paints. What that update then reaches is kept as small as possible: the scenes that do not read the
+scroll value are memoised against it and sit out scroll renders entirely, and inside the two that do read
+it, the static subtrees are memoised separately.
+
+The map loop runs every frame and almost always does nothing. It reads one flag and returns. A repaint
+happens when a payload lands, when the pointer moves over the canvas, during the crossfade from the stored
+capture to live traffic, and while a new aircraft eases in. Positions arrive on the poll interval, so
+between polls nothing moves and nothing repaints. The basemap is projected once into an offscreen canvas
+and blitted on each repaint, which leaves trails and aircraft as the only per-frame drawing, and it is
+rebaked on resize or when the atlas loads, nowhere else.
 
 | Control | Effect |
 |---|---|
@@ -141,6 +170,19 @@ One scroll value reaches every scene, so an unguarded page re-renders fully per 
 | Motion hand-rolled, no library | Gated on `prefers-reduced-motion` throughout |
 | Dynamic viewport units | A mobile URL bar cannot break centring, and the pre-hydration shell matches the same geometry |
 | Landmarks, focus rings, described sliders, canvas with a text alternative | Keyboard and screen-reader reachable |
+| Device pixel ratio capped at 2 | A 3x phone paints 9 pixels where the cap paints 4, and nobody can see the difference at this zoom |
+| Trails bounded per aircraft, dropped 30s after the last sighting | Memory cannot grow with session length |
+| Pointer move throttled to one frame, touch listeners passive | Hover cannot outrun the renderer, and scrolling is never blocked waiting on a handler |
+
+The tier that was never merged is the part worth reporting. The page felt slow on one machine, so a reduced
+mode was built for it: shorter trails, a slower poll, no pixel doubling, a query string to force either
+tier and a second one to draw an FPS meter. Detection read core count and device memory, then asked for a
+WebGL context on the condition that a major performance caveat was disallowed, which is how a browser
+compositing on the CPU gives itself away. The A/B measured the same frame times with the tier on and off.
+The machine turned out to be a browser that had dropped to software rendering after a driver crash, which
+is the one case the probe was written to catch and the one case nobody thought to check first. The branch
+is parked and unmerged. What it left behind is a rule. Judge smoothness on hardware that is working, and
+ship a degraded tier only on evidence from the devices it is meant for.
 
 ---
 
